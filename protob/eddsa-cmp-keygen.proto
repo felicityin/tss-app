@@ -1,0 +1,38 @@
+syntax = "proto3";
+package legend.tsslib.eddsacmp.keygen;
+option go_package = "eddsacmp/keygen";
+
+// protoc --go_out=. eddsa-cmp-keygen.proto
+
+/*
+ * Represents a BROADCAST message sent during Round 1 of the EDDSA TSS keygen protocol.
+ */
+message KGRound1Message {
+    bytes commitment = 1;
+}
+
+/*
+ * Represents a BROADCAST message sent to each party during Round 2 of the EDDSA TSS keygen protocol.
+ */
+message KGRound2Message {
+    bytes ssid = 1;
+    int32 party_index = 2;
+    bytes srid = 3;
+    bytes public_x_x = 4;
+    bytes public_x_y = 5;
+    bytes commitment_x = 6;
+    bytes commitment_y = 7;
+    bytes u = 8;
+    bytes paillier_n = 9;
+    bytes pedersen_s = 10;
+    bytes pedersen_t = 11;
+}
+
+/*
+ * Represents a BROADCAST message sent during Round 3 of the EDDSA TSS keygen protocol.
+ */
+ message KGRound3Message {
+    bytes sch_proof = 1;
+    repeated bytes mod_proof = 2;
+    bytes prm_proof = 3;
+}
