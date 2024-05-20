@@ -130,6 +130,8 @@ func NewLocalParty(
 	p.temp.signRound1Message2s = make([][]byte, partyCount)
 	p.temp.signRound2Messages = make([][]byte, partyCount)
 	p.temp.signRound3Messages = make([][]byte, partyCount)
+	p.temp.send.signRound1Message2s = make([][]byte, partyCount)
+	p.temp.send.signRound2Messages = make([][]byte, partyCount)
 
 	// temp data init
 	m, err := hex.DecodeString(msg)
