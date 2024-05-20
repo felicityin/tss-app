@@ -57,7 +57,6 @@ func KeygenRound3Exec(key string) (msgWireBytes []byte) {
 			return
 		}
 
-		common.Logger.Debugf("party: %d, round_3, calc V", i)
 		v := common.SHA512_256(
 			party.temp.ssid,
 			[]byte(strconv.Itoa(j)),
@@ -76,11 +75,9 @@ func KeygenRound3Exec(key string) (msgWireBytes []byte) {
 		}
 
 		// Set srid as xor of all party's srid_i
-		common.Logger.Debugf("party: %d, round_3, calc srid", i)
 		party.temp.srid = utils.Xor(party.temp.srid, party.temp.payload[j].Srid)
 	}
 
-	common.Logger.Debugf("party: %d, round_3, calc challenge", i)
 	challenge := common.RejectionSample(
 		party.params.EC().Params().N,
 		common.SHA512_256i_TAGGED(
@@ -94,7 +91,6 @@ func KeygenRound3Exec(key string) (msgWireBytes []byte) {
 	)
 
 	// Generate schnorr proof
-	common.Logger.Debugf("party: %d, round_3, calc schnorr proof", i)
 	schProof := schnorr.Prove(party.params.EC().Params().N, party.temp.tau, challenge, party.save.PrivXi)
 
 	// BROADCAST proofs

@@ -57,7 +57,6 @@ func OnSignRound1Exec(key string) (msgWireBytes []byte) {
 
 	// k in F_q
 	party.temp.k = common.GetRandomPositiveInt(party.params.Rand(), party.params.EC().Params().N)
-	common.Logger.Debugf("P[%d]: calc ki", i)
 
 	// Ki = enc(k, ρ)
 	kCiphertext, rho, err := party.keys.PaillierPKs[i].EncryptAndReturnRandomness(
@@ -70,10 +69,8 @@ func OnSignRound1Exec(key string) (msgWireBytes []byte) {
 	}
 	party.temp.rho = rho
 	party.temp.kCiphertexts[i] = kCiphertext
-	common.Logger.Debugf("P[%d]: calc kCiphertext", i)
 
 	// broadcast Ki
-	common.Logger.Debugf("P[%d]: broadcast Ki", i)
 	r1msg1 := m.NewSignRound1Message1(party.PartyID(), kCiphertext)
 	msgWireBytes, _, err = r1msg1.WireBytes()
 	if err != nil {
@@ -94,7 +91,6 @@ func OnSignRound1Exec(key string) (msgWireBytes []byte) {
 			common.Logger.Errorf("create enc proof failed: %s, party: %d", err, j)
 			return
 		}
-		common.Logger.Debugf("P[%d]: calc enc proof", i)
 
 		encProofBytes, err := proto.Marshal(encProof)
 		if err != nil {
@@ -102,7 +98,6 @@ func OnSignRound1Exec(key string) (msgWireBytes []byte) {
 			return
 		}
 
-		common.Logger.Debugf("P[%d]: p2p send enc proof", i)
 		r1msg2 := m.NewSignRound1Message2(Pj, party.PartyID(), encProofBytes)
 		msg2WireBytes, _, err := r1msg2.WireBytes()
 		if err != nil {

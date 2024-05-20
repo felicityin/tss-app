@@ -39,7 +39,6 @@ func KeygenRound4Exec(key string) (saveBytes []byte) {
 			return
 		}
 
-		common.Logger.Debugf("round_4 calc challenge")
 		challenge := common.RejectionSample(
 			party.params.EC().Params().N,
 			common.SHA512_256i_TAGGED(
@@ -52,11 +51,7 @@ func KeygenRound4Exec(key string) (saveBytes []byte) {
 			),
 		)
 
-		common.Logger.Debugf("round_4 get proof")
-
 		schProof := schnorr.Proof{Proof: pMsg.Content().(*m.KGRound3Message).UnmarshalSchProof()}
-
-		common.Logger.Debugf("round_4 verify proof")
 
 		if !schProof.Verify(party.temp.payload[j].CommitedA, party.save.PubXj[j], challenge) {
 			common.Logger.Errorf("schnorr proof verify failed, party: %d", j)

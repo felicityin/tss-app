@@ -44,7 +44,6 @@ func OnsignRound2Exec(key string) (ok bool) {
 		}
 		r1msg1 := pMsg.Content().(*m.SignRound1Message1)
 		party.temp.kCiphertexts[j] = r1msg1.UnmarshalK()
-		common.Logger.Debugf("P[%d]: receive P[%d]'s kCiphertext", i, j)
 
 		pMsg, err = tss.ParseWireMsg(party.temp.signRound1Message2s[j])
 		if err != nil {
@@ -57,7 +56,6 @@ func OnsignRound2Exec(key string) (ok bool) {
 			common.Logger.Errorf("unmarshal enc proof failed, party: %d", j)
 			return
 		}
-		common.Logger.Debugf("P[%d]: receive P[%d]'s enc proof", i, j)
 
 		contextJ := append(party.temp.ssid, big.NewInt(int64(j)).Bytes()...)
 
@@ -67,11 +65,9 @@ func OnsignRound2Exec(key string) (ok bool) {
 			common.Logger.Errorf("verify enc proof failed, party: %d", j)
 			return
 		}
-		common.Logger.Debugf("P[%d]: verify P[%d]'s enc proof ok", i, j)
 	}
 
 	// Compute Ri = ki * G
-	common.Logger.Debugf("P[%d]: calc Ri", i)
 	Ri := crypto.ScalarBaseMult(party.params.EC(), party.temp.k)
 
 	G, err := crypto.NewECPoint(party.params.EC(), party.params.EC().Params().Gx, party.params.EC().Params().Gy)
@@ -91,14 +87,11 @@ func OnsignRound2Exec(key string) (ok bool) {
 			common.Logger.Errorf("create log proof failed")
 			return
 		}
-		common.Logger.Debugf("P[%d]: calc log proof for P[%d]", i, j)
 
 		err = logProof.Verify(ProofParameter, contextI, party.temp.kCiphertexts[i],
 			party.keys.PaillierPKs[i].N, party.keys.RingPedersenPKs[j], Ri, G)
 		if err != nil {
 			common.Logger.Errorf("verify my log proof failed: %s, party: %d", err, j)
-		} else {
-			common.Logger.Debugf("verify my log proof ok, for %d", j)
 		}
 
 		logProofBytes, err := proto.Marshal(logProof)
@@ -107,7 +100,6 @@ func OnsignRound2Exec(key string) (ok bool) {
 			return
 		}
 
-		common.Logger.Debugf("P[%d]: send log proof to P[%d]", i, j)
 		r2msg := m.NewSignRound2Message(Pj, party.PartyID(), Ri, logProofBytes)
 		msgWireBytes, _, err := r2msg.WireBytes()
 		if err != nil {
@@ -122,6 +114,15 @@ func OnsignRound2Exec(key string) (ok bool) {
 	}
 
 	return true
+}
+
+func GetRound2Msg(key string, to int) (msgWireBytes []byte) {
+	party, ok := SignParties[key]
+	if !ok {
+		common.Logger.Errorf("party not found: %s", key)
+		return nil
+	}
+	return party.temp.send.signRound2Messages[to]
 }
 
 func OnSignRound2MsgAccept(key string, from int, msgWireBytes []byte) bool {

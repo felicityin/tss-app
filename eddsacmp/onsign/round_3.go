@@ -58,7 +58,6 @@ func OnsignRound3Exec(key string) (msgWireBytes []byte) {
 			common.Logger.Errorf("failed to unmarshal log proof: %s, party: %d", err, j)
 			return
 		}
-		common.Logger.Debugf("P[%d]: receive P[%d]'s log proof", i, j)
 
 		Rj, err := r2msg.UnmarshalR(party.params.EC())
 		if err != nil {
@@ -74,7 +73,6 @@ func OnsignRound3Exec(key string) (msgWireBytes []byte) {
 			common.Logger.Errorf("verify log proof failed: %s, party: %d", err, j)
 			return
 		}
-		common.Logger.Debugf("P[%d]: verify P[%d]'s log proof ok", i, j)
 
 		Rj = Rj.EightInvEight()
 		if err != nil {
