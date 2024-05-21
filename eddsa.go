@@ -22,12 +22,12 @@ type MpcResult struct {
 	Err string `json:"error"`
 }
 
-func (result *MpcExecResult) ToJson() string {
+func (result MpcExecResult) ToJson() string {
 	b, _ := json.Marshal(result)
 	return string(b)
 }
 
-func (result *MpcResult) ToJson() string {
+func (result MpcResult) ToJson() string {
 	b, _ := json.Marshal(result)
 	return string(b)
 }
