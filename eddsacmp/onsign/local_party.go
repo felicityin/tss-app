@@ -81,7 +81,7 @@ func NewLocalParty(
 	msg string, // hex string
 	keyData []byte, // keygen.LocalPartySaveData
 	refreshData []byte, // refresh.LocalPartySaveData
-) bool {
+) (result OnsignResult) {
 	uIds := make(tss.UnSortedPartyIDs, 0, partyCount)
 	for i := 0; i < partyCount; i++ {
 		pId, _ := new(big.Int).SetString(pIDs[i], 10)
@@ -94,13 +94,15 @@ func NewLocalParty(
 	keys := &keygen.LocalPartySaveData{}
 	if err := json.Unmarshal(keyData, keys); err != nil {
 		common.Logger.Errorf("unmarshal keygen save data err: %s", err.Error())
-		return false
+		result.Err = fmt.Sprintf("unmarshal keygen save data err: %s", err.Error())
+		return
 	}
 
 	rfSave := &RefreshLocalPartySaveData{}
 	if err := json.Unmarshal(refreshData, rfSave); err != nil {
 		common.Logger.Errorf("unmarshal refresh save data err: %s", err.Error())
-		return false
+		result.Err = fmt.Sprintf("unmarshal refresh save data err: %s", err.Error())
+		return
 	}
 
 	keys.LocalRefreshSaveData = NewRefreshSaveData(partyCount)
@@ -137,13 +139,15 @@ func NewLocalParty(
 	m, err := hex.DecodeString(msg)
 	if err != nil {
 		common.Logger.Errorf("hex decode msg err: %s", err.Error())
-		return false
+		result.Err = fmt.Sprintf("hex decode msg err: %s", err.Error())
+		return
 	}
 	p.temp.m = new(big.Int).SetBytes(m)
 	p.temp.kCiphertexts = make([]*big.Int, partyCount)
 
 	SignParties[key] = p
-	return true
+	result.Ok = true
+	return
 }
 
 func RemoveSignParty(key string) {

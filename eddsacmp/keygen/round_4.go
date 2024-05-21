@@ -7,6 +7,7 @@ import "C"
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/big"
 
 	"tss/common"
@@ -15,10 +16,11 @@ import (
 	"tss/tss"
 )
 
-func KeygenRound4Exec(key string) (saveBytes []byte) {
+func KeygenRound4Exec(key string) (result KeygenExecResult) {
 	party, ok := Parties[key]
 	if !ok {
 		common.Logger.Errorf("party not found: %s", key)
+		result.Err = fmt.Sprintf("party not found: %s", key)
 		return
 	}
 
@@ -36,6 +38,7 @@ func KeygenRound4Exec(key string) (saveBytes []byte) {
 		pMsg, err := tss.ParseWireMsg(bz)
 		if err != nil {
 			common.Logger.Errorf("msg error, parse wire msg fail, err:%s", err.Error())
+			result.Err = fmt.Sprintf("msg error, parse wire msg fail, err:%s", err.Error())
 			return
 		}
 
@@ -55,6 +58,7 @@ func KeygenRound4Exec(key string) (saveBytes []byte) {
 
 		if !schProof.Verify(party.temp.payload[j].CommitedA, party.save.PubXj[j], challenge) {
 			common.Logger.Errorf("schnorr proof verify failed, party: %d", j)
+			result.Err = fmt.Sprintf("schnorr proof verify failed, party: %d", j)
 			return
 		}
 	}
@@ -70,17 +74,21 @@ func KeygenRound4Exec(key string) (saveBytes []byte) {
 		eddsaPubKey, err = eddsaPubKey.Add(pubx)
 		if err != nil {
 			common.Logger.Errorf("calc pubkey failed, party: %d", j)
+			result.Err = fmt.Sprintf("calc pubkey failed, party: %d", j)
 			return
 		}
 	}
 	party.save.EdDSAPub = eddsaPubKey
 
-	saveBytes, err = json.Marshal(party.save)
+	saveBytes, err := json.Marshal(party.save)
 	if err != nil {
 		common.Logger.Errorf("round_4 save err: %s", err.Error())
-		return nil
+		result.Err = fmt.Sprintf("round_4 save err: %s", err.Error())
+		return
 	}
 	common.Logger.Infof("party: %d, round_4 save", i)
 
-	return saveBytes
+	result.Ok = true
+	result.MsgWireBytes = saveBytes
+	return result
 }

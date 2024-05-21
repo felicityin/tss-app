@@ -6,6 +6,7 @@ package keygen
 import "C"
 
 import (
+	"fmt"
 	"math/big"
 	"strconv"
 
@@ -15,10 +16,22 @@ import (
 	"tss/tss"
 )
 
-func KeygenRound1Exec(key string) (msgWireBytes []byte) {
+type KeygenExecResult struct {
+	Ok           bool   `json:"ok"`
+	Err          string `json:"error"`
+	MsgWireBytes []byte `json:"data"`
+}
+
+type KeygenResult struct {
+	Ok  bool   `json:"ok"`
+	Err string `json:"error"`
+}
+
+func KeygenRound1Exec(key string) (result KeygenExecResult) {
 	party, ok := Parties[key]
 	if !ok {
 		common.Logger.Errorf("party not found: %s", key)
+		result.Err = fmt.Sprintf("party not found: %s", key)
 		return
 	}
 
@@ -32,6 +45,7 @@ func KeygenRound1Exec(key string) (msgWireBytes []byte) {
 	party.temp.ssidNonce = new(big.Int).SetUint64(0)
 	ssid, err := party.getSSID()
 	if err != nil {
+		result.Err = fmt.Sprintf("get ssid err: %s", err.Error())
 		return
 	}
 	party.temp.ssid = ssid
@@ -64,44 +78,53 @@ func KeygenRound1Exec(key string) (msgWireBytes []byte) {
 	)
 
 	msg := m.NewKGRound1Message(party.PartyID(), hash)
-	msgWireBytes, _, err = msg.WireBytes()
+	msgWireBytes, _, err := msg.WireBytes()
 	if err != nil {
 		common.Logger.Errorf("get msg wire bytes error: %s", key)
+		result.Err = fmt.Sprintf("get msg wire bytes error: %s", key)
 		return
 	}
 	party.temp.kgRound1Messages[i] = msgWireBytes
-	return msgWireBytes
+
+	result.Ok = true
+	result.MsgWireBytes = msgWireBytes
+	return result
 }
 
-func KeygenRound1Accept(key string, from int, msgWireBytes []byte) bool {
+func KeygenRound1Accept(key string, from int, msgWireBytes []byte) (result KeygenResult) {
 	msg, err := tss.ParseWireMsg([]byte(msgWireBytes))
 	if err != nil {
 		common.Logger.Errorf("msg error, parse wire msg fail, err:%s", err.Error())
-		return false
+		result.Err = fmt.Sprintf("msg error, parse wire msg fail, err:%s", err.Error())
+		return
 	}
 	if _, ok := msg.Content().(*m.KGRound1Message); !ok {
-		return false
+		result.Err = fmt.Sprintf("not KGRound1Message, err:%s", err.Error())
+		return
 	}
 
 	party, ok := Parties[key]
 	if !ok {
 		common.Logger.Errorf("party not found: %s", key)
-		return false
+		result.Err = fmt.Sprintf("party not found: %s", key)
+		return
 	}
 
+	result.Ok = true
 	party.ok[from] = true
 	if from == party.PartyID().Index {
-		return true
+		return
 	}
 	party.temp.kgRound1Messages[from] = msgWireBytes
-	return true
+	return
 }
 
-func KeygenRound1Finish(key string) bool {
+func KeygenRound1Finish(key string) (result KeygenResult) {
 	party, ok := Parties[key]
 	if !ok {
 		common.Logger.Errorf("party not found: %s", key)
-		return false
+		result.Err = fmt.Sprintf("party not found: %s", key)
+		return
 	}
 
 	for j, msg := range party.temp.kgRound1Messages {
@@ -109,8 +132,10 @@ func KeygenRound1Finish(key string) bool {
 			continue
 		}
 		if msg == nil || len(msg) == 0 {
-			return false
+			result.Err = fmt.Sprintf("msg is null: %d", j)
+			return
 		}
 	}
-	return true
+	result.Ok = true
+	return
 }

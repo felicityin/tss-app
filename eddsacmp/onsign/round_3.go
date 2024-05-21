@@ -7,6 +7,7 @@ import "C"
 
 import (
 	"crypto/sha512"
+	"fmt"
 	"math/big"
 
 	"github.com/agl/ed25519/edwards25519"
@@ -17,10 +18,11 @@ import (
 	"tss/tss"
 )
 
-func OnsignRound3Exec(key string) (msgWireBytes []byte) {
+func OnsignRound3Exec(key string) (result OnsignExecResult) {
 	party, ok := SignParties[key]
 	if !ok {
 		common.Logger.Errorf("party not found: %s", key)
+		result.Err = fmt.Sprintf("party not found: %s", key)
 		return
 	}
 
@@ -37,6 +39,7 @@ func OnsignRound3Exec(key string) (msgWireBytes []byte) {
 	G, err := crypto.NewECPoint(party.params.EC(), party.params.EC().Params().Gx, party.params.EC().Params().Gy)
 	if err != nil {
 		common.Logger.Errorf("create base point failed")
+		result.Err = fmt.Sprintf("create base point failed")
 		return
 	}
 
@@ -49,6 +52,7 @@ func OnsignRound3Exec(key string) (msgWireBytes []byte) {
 		pMsg, err := tss.ParseWireMsg(party.temp.signRound2Messages[j])
 		if err != nil {
 			common.Logger.Errorf("msg error, parse wire msg fail, err:%s", err.Error())
+			result.Err = fmt.Sprintf("msg error, parse wire msg fail, err:%s", err.Error())
 			return
 		}
 		r2msg := pMsg.Content().(*m.SignRound2Message)
@@ -56,12 +60,14 @@ func OnsignRound3Exec(key string) (msgWireBytes []byte) {
 		logProof, err := r2msg.UnmarshalLogProof(party.params.EC())
 		if err != nil {
 			common.Logger.Errorf("failed to unmarshal log proof: %s, party: %d", err, j)
+			result.Err = fmt.Sprintf("failed to unmarshal log proof: %s, party: %d", err, j)
 			return
 		}
 
 		Rj, err := r2msg.UnmarshalR(party.params.EC())
 		if err != nil {
 			common.Logger.Errorf("unmarshal R failed: %s, party: %d", err, j)
+			result.Err = fmt.Sprintf("unmarshal R failed: %s, party: %d", err, j)
 			return
 		}
 
@@ -71,11 +77,13 @@ func OnsignRound3Exec(key string) (msgWireBytes []byte) {
 			party.keys.RingPedersenPKs[i], Rj, G)
 		if err != nil {
 			common.Logger.Errorf("verify log proof failed: %s, party: %d", err, j)
+			result.Err = fmt.Sprintf("verify log proof failed: %s, party: %d", err, j)
 			return
 		}
 
 		Rj = Rj.EightInvEight()
 		if err != nil {
+			result.Err = fmt.Sprintf("Rj.EightInvEight: %s", err.Error())
 			return
 		}
 
@@ -116,45 +124,53 @@ func OnsignRound3Exec(key string) (msgWireBytes []byte) {
 
 	// broadcast si to other parties
 	r3msg := m.NewSignRound3Message(party.PartyID(), encodedBytesToBigInt(&localS))
-	msgWireBytes, _, err = r3msg.WireBytes()
+	msgWireBytes, _, err := r3msg.WireBytes()
 	if err != nil {
 		common.Logger.Errorf("get msg wire bytes error: %s", key)
+		result.Err = fmt.Sprintf("get msg wire bytes error: %s", key)
 		return
 	}
 	party.temp.signRound3Messages[i] = msgWireBytes
 
-	return msgWireBytes
+	result.Ok = true
+	result.MsgWireBytes = msgWireBytes
+	return result
 }
 
-func OnSignRound3MsgAccept(key string, from int, msgWireBytes []byte) bool {
+func OnSignRound3MsgAccept(key string, from int, msgWireBytes []byte) (result OnsignResult) {
 	msg, err := tss.ParseWireMsg([]byte(msgWireBytes))
 	if err != nil {
 		common.Logger.Errorf("msg error, parse wire msg fail, err:%s", err.Error())
-		return false
+		result.Err = fmt.Sprintf("msg error, parse wire msg fail, err:%s", err.Error())
+		return
 	}
 	if _, ok := msg.Content().(*m.SignRound3Message); !ok {
-		return false
+		result.Err = fmt.Sprintf("not SignRound3Message")
+		return
 	}
 
 	party, ok := SignParties[key]
 	if !ok {
 		common.Logger.Errorf("party not found: %s", key)
-		return false
+		result.Err = fmt.Sprintf("party not found: %s", key)
+		return
 	}
 
+	result.Ok = true
 	party.ok[from] = true
 	if from == party.PartyID().Index {
-		return true
+		return
 	}
 	party.temp.signRound3Messages[from] = msgWireBytes
-	return true
+	return
 }
 
-func OnSignRound3Finish(key string) bool {
+func OnSignRound3Finish(key string) (result OnsignResult) {
 	party, ok := SignParties[key]
 	if !ok {
 		common.Logger.Errorf("party not found: %s", key)
-		return false
+		result.Err = fmt.Sprintf("party not found: %s", key)
+		return
 	}
 
 	for j, msg := range party.temp.signRound3Messages {
@@ -162,8 +178,10 @@ func OnSignRound3Finish(key string) bool {
 			continue
 		}
 		if msg == nil || len(msg) == 0 {
-			return false
+			result.Err = fmt.Sprintf("msg is null: %d", j)
+			return
 		}
 	}
-	return true
+	result.Ok = true
+	return
 }

@@ -7,6 +7,7 @@ import "C"
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/big"
 
 	"tss/common"
@@ -19,10 +20,11 @@ import (
 	edwards "github.com/decred/dcrd/dcrec/edwards/v2"
 )
 
-func OnsignFinalExec(key string) (saveBytes []byte) {
+func OnsignFinalExec(key string) (result OnsignExecResult) {
 	party, ok := SignParties[key]
 	if !ok {
 		common.Logger.Errorf("party not found: %s", key)
+		result.Err = fmt.Sprintf("party not found: %s", key)
 		return
 	}
 
@@ -44,6 +46,7 @@ func OnsignFinalExec(key string) (saveBytes []byte) {
 		pMsg, err := tss.ParseWireMsg(party.temp.signRound1Message2s[j])
 		if err != nil {
 			common.Logger.Errorf("msg error, parse wire msg fail, err:%s", err.Error())
+			result.Err = fmt.Sprintf("msg error, parse wire msg fail, err:%s", err.Error())
 			return
 		}
 		r3msg := pMsg.Content().(*m.SignRound3Message)
@@ -74,14 +77,18 @@ func OnsignFinalExec(key string) (saveBytes []byte) {
 
 	ok = edwards.Verify(&pk, party.data.M, party.temp.r, s)
 	if !ok {
+		result.Err = fmt.Sprintf("verify failed")
 		return
 	}
 
 	saveBytes, err := json.Marshal(party.data)
 	if err != nil {
 		common.Logger.Errorf("round_final save err: %s", err.Error())
-		return nil
+		result.Err = fmt.Sprintf("round_final save err: %s", err.Error())
+		return
 	}
 
-	return saveBytes
+	result.Ok = true
+	result.MsgWireBytes = saveBytes
+	return result
 }

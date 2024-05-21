@@ -6,6 +6,7 @@ package onsign
 import "C"
 
 import (
+	"fmt"
 	"math/big"
 
 	"google.golang.org/protobuf/proto"
@@ -17,10 +18,11 @@ import (
 	"tss/tss"
 )
 
-func OnsignRound2Exec(key string) (ok bool) {
+func OnsignRound2Exec(key string) (result OnsignResult) {
 	party, ok := SignParties[key]
 	if !ok {
 		common.Logger.Errorf("party not found: %s", key)
+		result.Err = fmt.Sprintf("party not found: %s", key)
 		return
 	}
 
@@ -40,6 +42,7 @@ func OnsignRound2Exec(key string) (ok bool) {
 		pMsg, err := tss.ParseWireMsg(party.temp.signRound1Message1s[j])
 		if err != nil {
 			common.Logger.Errorf("msg error, parse wire msg fail, err:%s", err.Error())
+			result.Err = fmt.Sprintf("msg error, parse wire msg fail, err:%s", err.Error())
 			return
 		}
 		r1msg1 := pMsg.Content().(*m.SignRound1Message1)
@@ -48,12 +51,14 @@ func OnsignRound2Exec(key string) (ok bool) {
 		pMsg, err = tss.ParseWireMsg(party.temp.signRound1Message2s[j])
 		if err != nil {
 			common.Logger.Errorf("msg error, parse wire msg2 fail, err:%s", err.Error())
+			result.Err = fmt.Sprintf("msg error, parse wire msg2 fail, err:%s", err.Error())
 			return
 		}
 		r1msg2 := pMsg.Content().(*m.SignRound1Message2)
 		encProof, err := r1msg2.UnmarshalEncProof()
 		if err != nil {
 			common.Logger.Errorf("unmarshal enc proof failed, party: %d", j)
+			result.Err = fmt.Sprintf("unmarshal enc proof failed, party: %d", j)
 			return
 		}
 
@@ -63,6 +68,7 @@ func OnsignRound2Exec(key string) (ok bool) {
 			party.keys.PaillierPKs[j].N, party.keys.RingPedersenPKs[i],
 		); err != nil {
 			common.Logger.Errorf("verify enc proof failed, party: %d", j)
+			result.Err = fmt.Sprintf("verify enc proof failed, party: %d", j)
 			return
 		}
 	}
@@ -73,6 +79,7 @@ func OnsignRound2Exec(key string) (ok bool) {
 	G, err := crypto.NewECPoint(party.params.EC(), party.params.EC().Params().Gx, party.params.EC().Params().Gy)
 	if err != nil {
 		common.Logger.Errorf("create base point failed")
+		result.Err = fmt.Sprintf("create base point failed")
 		return
 	}
 
@@ -85,6 +92,7 @@ func OnsignRound2Exec(key string) (ok bool) {
 			party.temp.rho, party.temp.kCiphertexts[i], party.keys.PaillierPKs[i].N, party.keys.RingPedersenPKs[j], Ri, G)
 		if err != nil {
 			common.Logger.Errorf("create log proof failed")
+			result.Err = fmt.Sprintf("create log proof failed")
 			return
 		}
 
@@ -92,11 +100,14 @@ func OnsignRound2Exec(key string) (ok bool) {
 			party.keys.PaillierPKs[i].N, party.keys.RingPedersenPKs[j], Ri, G)
 		if err != nil {
 			common.Logger.Errorf("verify my log proof failed: %s, party: %d", err, j)
+			result.Err = fmt.Sprintf("verify my log proof failed: %s, party: %d", err, j)
+			return
 		}
 
 		logProofBytes, err := proto.Marshal(logProof)
 		if err != nil {
 			common.Logger.Errorf("marshal log proof failed: %s, party: %d", err, j)
+			result.Err = fmt.Sprintf("marshal log proof failed: %s, party: %d", err, j)
 			return
 		}
 
@@ -104,6 +115,7 @@ func OnsignRound2Exec(key string) (ok bool) {
 		msgWireBytes, _, err := r2msg.WireBytes()
 		if err != nil {
 			common.Logger.Errorf("get msg wire bytes error: %s", key)
+			result.Err = fmt.Sprintf("get msg wire bytes error: %s", key)
 			return
 		}
 		party.temp.send.signRound2Messages[j] = msgWireBytes
@@ -113,47 +125,56 @@ func OnsignRound2Exec(key string) (ok bool) {
 		}
 	}
 
-	return true
+	result.Ok = true
+	return result
 }
 
-func GetRound2Msg(key string, to int) (msgWireBytes []byte) {
+func GetRound2Msg(key string, to int) (result OnsignExecResult) {
 	party, ok := SignParties[key]
 	if !ok {
 		common.Logger.Errorf("party not found: %s", key)
-		return nil
+		result.Err = fmt.Sprintf("party not found: %s", key)
+		return
 	}
-	return party.temp.send.signRound2Messages[to]
+	result.Ok = true
+	result.MsgWireBytes = party.temp.send.signRound2Messages[to]
+	return
 }
 
-func OnSignRound2MsgAccept(key string, from int, msgWireBytes []byte) bool {
+func OnSignRound2MsgAccept(key string, from int, msgWireBytes []byte) (result OnsignResult) {
 	msg, err := tss.ParseWireMsg([]byte(msgWireBytes))
 	if err != nil {
 		common.Logger.Errorf("msg error, parse wire msg fail, err:%s", err.Error())
-		return false
+		result.Err = fmt.Sprintf("msg error, parse wire msg fail, err:%s", err.Error())
+		return
 	}
 	if _, ok := msg.Content().(*m.SignRound2Message); !ok {
-		return false
+		result.Err = fmt.Sprintf("not SignRound2Message")
+		return
 	}
 
 	party, ok := SignParties[key]
 	if !ok {
 		common.Logger.Errorf("party not found: %s", key)
-		return false
+		result.Err = fmt.Sprintf("party not found: %s", key)
+		return
 	}
 
+	result.Ok = true
 	party.ok[from] = true
 	if from == party.PartyID().Index {
-		return true
+		return
 	}
 	party.temp.signRound2Messages[from] = msgWireBytes
-	return true
+	return
 }
 
-func OnSignRound2Finish(key string) bool {
+func OnSignRound2Finish(key string) (result OnsignResult) {
 	party, ok := SignParties[key]
 	if !ok {
 		common.Logger.Errorf("party not found: %s", key)
-		return false
+		result.Err = fmt.Sprintf("not SignRound1Message2")
+		return
 	}
 
 	for j, msg := range party.temp.signRound2Messages {
@@ -161,8 +182,10 @@ func OnSignRound2Finish(key string) bool {
 			continue
 		}
 		if msg == nil || len(msg) == 0 {
-			return false
+			result.Err = fmt.Sprintf("msg is null: %d", j)
+			return
 		}
 	}
-	return true
+	result.Ok = true
+	return
 }
