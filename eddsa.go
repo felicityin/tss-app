@@ -1,4 +1,4 @@
-package tssapp
+package tss
 
 //#include <stdio.h>
 //#include <stdlib.h>
@@ -7,6 +7,7 @@ import "C"
 
 import (
 	"encoding/json"
+	"strings"
 	"tss/eddsacmp/keygen"
 	"tss/eddsacmp/onsign"
 )
@@ -36,10 +37,11 @@ func NewKeygenLocalParty(
 	key string,
 	partyIndex int,
 	partyCount int,
-	pIDs []string,
+	pIDs string,
 	rootPrivKey string, // hex string
 ) bool {
-	return keygen.NewLocalParty(key, partyIndex, partyCount, pIDs, rootPrivKey)
+	ids := strings.Split(pIDs, ",")
+	return keygen.NewLocalParty(key, partyIndex, partyCount, ids, rootPrivKey)
 }
 
 func RemoveKeygenParty(key string) {
@@ -102,12 +104,13 @@ func NewSignLocalParty(
 	key string,
 	partyIndex int,
 	partyCount int,
-	pIDs []string,
+	pIDs string,
 	msg string, // hex string
 	keyData []byte, // keygen.LocalPartySaveData
 	refreshData []byte, // refresh.LocalPartySaveData
 ) *MpcResult {
-	res := onsign.NewLocalParty(key, partyIndex, partyCount, pIDs, msg, keyData, refreshData)
+	ids := strings.Split(pIDs, ",")
+	res := onsign.NewLocalParty(key, partyIndex, partyCount, ids, msg, keyData, refreshData)
 	return resFromOnsign(res)
 }
 
