@@ -1,4 +1,4 @@
-package tss
+package tss_sdk
 
 //#include <stdio.h>
 //#include <stdlib.h>
@@ -8,8 +8,8 @@ import "C"
 import (
 	"encoding/json"
 	"strings"
-	"tss/eddsacmp/keygen"
-	"tss/eddsacmp/onsign"
+	"tss_sdk/eddsacmp/keygen"
+	"tss_sdk/eddsacmp/onsign"
 )
 
 type MpcExecResult struct {
@@ -39,13 +39,20 @@ func NewKeygenLocalParty(
 	partyCount int,
 	pIDs string,
 	rootPrivKey string, // hex string
-) bool {
+) *MpcResult {
 	ids := strings.Split(pIDs, ",")
-	return keygen.NewLocalParty(key, partyIndex, partyCount, ids, rootPrivKey)
+	res := keygen.NewLocalParty(key, partyIndex, partyCount, ids, rootPrivKey)
+	return resFromKeygen(res)
 }
 
-func RemoveKeygenParty(key string) {
-	keygen.RemoveParty(key)
+func RemoveKeygenParty(key string) bool {
+	return keygen.RemoveParty(key)
+}
+
+// chainCodes: hex string array
+func SaveChainCodes(key string, chainCodes string) *MpcResult {
+	res := keygen.SaveChainCodes(key, chainCodes)
+	return resFromKeygen(res)
 }
 
 func KeygenRound1Exec(key string) *MpcExecResult {
@@ -53,7 +60,7 @@ func KeygenRound1Exec(key string) *MpcExecResult {
 	return execResFromKeygen(res)
 }
 
-func KeygenRound1Accept(key string, from int, msgWireBytes []byte) *MpcResult {
+func KeygenRound1Accept(key string, from int, msgWireBytes string) *MpcResult {
 	res := keygen.KeygenRound1Accept(key, from, msgWireBytes)
 	return resFromKeygen(res)
 }
@@ -68,7 +75,7 @@ func KeygenRound2Exec(key string) *MpcExecResult {
 	return execResFromKeygen(res)
 }
 
-func KeygenRound2Accept(key string, from int, msgWireBytes []byte) *MpcResult {
+func KeygenRound2Accept(key string, from int, msgWireBytes string) *MpcResult {
 	res := keygen.KeygenRound2Accept(key, from, msgWireBytes)
 	return resFromKeygen(res)
 }
@@ -83,7 +90,7 @@ func KeygenRound3Exec(key string) *MpcExecResult {
 	return execResFromKeygen(res)
 }
 
-func KeygenRound3Accept(key string, from int, msgWireBytes []byte) *MpcResult {
+func KeygenRound3Accept(key string, from int, msgWireBytes string) *MpcResult {
 	res := keygen.KeygenRound3Accept(key, from, msgWireBytes)
 	return resFromKeygen(res)
 }
@@ -93,6 +100,7 @@ func KeygenRound3Finish(key string) *MpcResult {
 	return resFromKeygen(res)
 }
 
+// chainCodes: hex string array
 func KeygenRound4Exec(key string) *MpcExecResult {
 	res := keygen.KeygenRound4Exec(key)
 	return execResFromKeygen(res)
@@ -106,16 +114,17 @@ func NewSignLocalParty(
 	partyCount int,
 	pIDs string,
 	msg string, // hex string
-	keyData []byte, // keygen.LocalPartySaveData
-	refreshData []byte, // refresh.LocalPartySaveData
+	keyData string, // keygen.LocalPartySaveData, base64 string
+	refreshData string, // refresh.LocalPartySaveData, base64 string
+	walletPath string,
 ) *MpcResult {
 	ids := strings.Split(pIDs, ",")
-	res := onsign.NewLocalParty(key, partyIndex, partyCount, ids, msg, keyData, refreshData)
+	res := onsign.NewLocalParty(key, partyIndex, partyCount, ids, msg, keyData, refreshData, walletPath)
 	return resFromOnsign(res)
 }
 
-func RemoveSignParty(key string) {
-	onsign.RemoveSignParty(key)
+func RemoveSignParty(key string) bool {
+	return onsign.RemoveSignParty(key)
 }
 
 func OnSignRound1Exec(key string) *MpcExecResult {
@@ -123,18 +132,13 @@ func OnSignRound1Exec(key string) *MpcExecResult {
 	return execResFromOnsign(res)
 }
 
-func GetOnsignRound1Msg2(key string, to int) *MpcExecResult {
+func GetOnSignRound1Msg(key string, to int) *MpcExecResult {
 	res := onsign.GetRound1Msg2(key, to)
 	return execResFromOnsign(res)
 }
 
-func OnSignRound1Msg1Accept(key string, from int, msgWireBytes []byte) *MpcResult {
-	res := onsign.OnSignRound1Msg1Accept(key, from, msgWireBytes)
-	return resFromOnsign(res)
-}
-
-func OnSignRound1Msg2Accept(key string, from int, msgWireBytes []byte) *MpcResult {
-	res := onsign.OnSignRound1Msg2Accept(key, from, msgWireBytes)
+func OnSignRound1MsgAccept(key string, from int, msgWireBytes string) *MpcResult {
+	res := onsign.OnSignRound1MsgAccept(key, from, msgWireBytes)
 	return resFromOnsign(res)
 }
 
@@ -143,17 +147,17 @@ func OnSignRound1Finish(key string) *MpcResult {
 	return resFromOnsign(res)
 }
 
-func OnsignRound2Exec(key string) *MpcResult {
+func OnSignRound2Exec(key string) *MpcResult {
 	res := onsign.OnsignRound2Exec(key)
 	return resFromOnsign(res)
 }
 
-func GetOnsignRound2Msg(key string, to int) *MpcExecResult {
+func GetOnSignRound2Msg(key string, to int) *MpcExecResult {
 	res := onsign.GetRound2Msg(key, to)
 	return execResFromOnsign(res)
 }
 
-func OnSignRound2MsgAccept(key string, from int, msgWireBytes []byte) *MpcResult {
+func OnSignRound2MsgAccept(key string, from int, msgWireBytes string) *MpcResult {
 	res := onsign.OnSignRound2MsgAccept(key, from, msgWireBytes)
 	return resFromOnsign(res)
 }
@@ -163,12 +167,12 @@ func OnSignRound2Finish(key string) *MpcResult {
 	return resFromOnsign(res)
 }
 
-func OnsignRound3Exec(key string) *MpcExecResult {
+func OnSignRound3Exec(key string) *MpcExecResult {
 	res := onsign.OnsignRound3Exec(key)
 	return execResFromOnsign(res)
 }
 
-func OnSignRound3MsgAccept(key string, from int, msgWireBytes []byte) *MpcResult {
+func OnSignRound3MsgAccept(key string, from int, msgWireBytes string) *MpcResult {
 	res := onsign.OnSignRound3MsgAccept(key, from, msgWireBytes)
 	return resFromOnsign(res)
 }
@@ -178,7 +182,7 @@ func OnSignRound3Finish(key string) *MpcResult {
 	return resFromOnsign(res)
 }
 
-func OnsignFinalExec(key string) *MpcExecResult {
+func OnSignFinalExec(key string) *MpcExecResult {
 	res := onsign.OnsignFinalExec(key)
 	return execResFromOnsign(res)
 }

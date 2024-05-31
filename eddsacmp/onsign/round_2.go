@@ -6,16 +6,17 @@ package onsign
 import "C"
 
 import (
+	"encoding/base64"
 	"fmt"
 	"math/big"
 
 	"google.golang.org/protobuf/proto"
 
-	"tss/common"
-	"tss/crypto"
-	"tss/crypto/logproof"
-	m "tss/eddsacmp/onsign/message"
-	"tss/tss"
+	"tss_sdk/common"
+	"tss_sdk/crypto"
+	"tss_sdk/crypto/logproof"
+	m "tss_sdk/eddsacmp/onsign/message"
+	"tss_sdk/tss"
 )
 
 func OnsignRound2Exec(key string) (result OnsignResult) {
@@ -30,19 +31,18 @@ func OnsignRound2Exec(key string) (result OnsignResult) {
 	party.resetOK()
 
 	i := party.PartyID().Index
-	Ps := party.params.Parties().IDs()
 	common.Logger.Infof("[sign] party: %d, party_2 start", i)
 
 	// Verify received enc proof
-	for j := range Ps {
+	for j := 0; j < len(party.temp.signRound1Message1s); j++ {
 		if j == i {
 			continue
 		}
 
 		pMsg, err := tss.ParseWireMsg(party.temp.signRound1Message1s[j])
 		if err != nil {
-			common.Logger.Errorf("msg error, parse wire msg fail, err:%s", err.Error())
-			result.Err = fmt.Sprintf("msg error, parse wire msg fail, err:%s", err.Error())
+			common.Logger.Errorf("msg error, parse wire msg1 fail, err:%s", err.Error())
+			result.Err = fmt.Sprintf("msg error, parse wire msg1 fail, err:%s", err.Error())
 			return
 		}
 		r1msg1 := pMsg.Content().(*m.SignRound1Message1)
@@ -79,7 +79,7 @@ func OnsignRound2Exec(key string) (result OnsignResult) {
 	G, err := crypto.NewECPoint(party.params.EC(), party.params.EC().Params().Gx, party.params.EC().Params().Gy)
 	if err != nil {
 		common.Logger.Errorf("create base point failed")
-		result.Err = fmt.Sprintf("create base point failed")
+		result.Err = "create base point failed"
 		return
 	}
 
@@ -92,7 +92,7 @@ func OnsignRound2Exec(key string) (result OnsignResult) {
 			party.temp.rho, party.temp.kCiphertexts[i], party.keys.PaillierPKs[i].N, party.keys.RingPedersenPKs[j], Ri, G)
 		if err != nil {
 			common.Logger.Errorf("create log proof failed")
-			result.Err = fmt.Sprintf("create log proof failed")
+			result.Err = "create log proof failed"
 			return
 		}
 
@@ -141,18 +141,7 @@ func GetRound2Msg(key string, to int) (result OnsignExecResult) {
 	return
 }
 
-func OnSignRound2MsgAccept(key string, from int, msgWireBytes []byte) (result OnsignResult) {
-	msg, err := tss.ParseWireMsg([]byte(msgWireBytes))
-	if err != nil {
-		common.Logger.Errorf("msg error, parse wire msg fail, err:%s", err.Error())
-		result.Err = fmt.Sprintf("msg error, parse wire msg fail, err:%s", err.Error())
-		return
-	}
-	if _, ok := msg.Content().(*m.SignRound2Message); !ok {
-		result.Err = fmt.Sprintf("not SignRound2Message")
-		return
-	}
-
+func OnSignRound2MsgAccept(key string, from int, msgWireBytes string) (result OnsignResult) {
 	party, ok := SignParties[key]
 	if !ok {
 		common.Logger.Errorf("party not found: %s", key)
@@ -160,12 +149,26 @@ func OnSignRound2MsgAccept(key string, from int, msgWireBytes []byte) (result On
 		return
 	}
 
-	result.Ok = true
-	party.ok[from] = true
-	if from == party.PartyID().Index {
+	rMsgBytes, err := base64.StdEncoding.DecodeString(msgWireBytes)
+	if err != nil {
+		common.Logger.Errorf("msg error, msg base64 decode fail, err:%s", err.Error())
+		result.Err = fmt.Sprintf("msg error, msg base64 decode fail, err:%s", err.Error())
 		return
 	}
-	party.temp.signRound2Messages[from] = msgWireBytes
+	party.temp.signRound2Messages[from] = rMsgBytes
+
+	msg, err := tss.ParseWireMsg(rMsgBytes)
+	if err != nil {
+		common.Logger.Errorf("msg error, parse wire msg fail, err:%s", err.Error())
+		result.Err = fmt.Sprintf("msg error, parse wire msg fail, err:%s", err.Error())
+		return
+	}
+	if _, ok := msg.Content().(*m.SignRound2Message); !ok {
+		result.Err = "not SignRound2Message"
+		return
+	}
+
+	result.Ok = true
 	return
 }
 
@@ -173,15 +176,12 @@ func OnSignRound2Finish(key string) (result OnsignResult) {
 	party, ok := SignParties[key]
 	if !ok {
 		common.Logger.Errorf("party not found: %s", key)
-		result.Err = fmt.Sprintf("not SignRound1Message2")
+		result.Err = "not SignRound1Message2"
 		return
 	}
 
 	for j, msg := range party.temp.signRound2Messages {
-		if party.ok[j] {
-			continue
-		}
-		if msg == nil || len(msg) == 0 {
+		if len(msg) == 0 {
 			result.Err = fmt.Sprintf("msg is null: %d", j)
 			return
 		}

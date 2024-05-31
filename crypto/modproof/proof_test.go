@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	. "tss/crypto/modproof"
-	"tss/crypto/paillier"
+	. "tss_sdk/crypto/modproof"
+	"tss_sdk/crypto/paillier"
 
 	"github.com/stretchr/testify/assert"
 )

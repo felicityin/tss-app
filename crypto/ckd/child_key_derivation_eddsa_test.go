@@ -8,8 +8,8 @@ import (
 	edwards "github.com/decred/dcrd/dcrec/edwards/v2"
 	"github.com/stretchr/testify/assert"
 
-	"tss/common"
-	"tss/crypto"
+	"tss_sdk/common"
+	"tss_sdk/crypto"
 )
 
 func TestDerivation(t *testing.T) {

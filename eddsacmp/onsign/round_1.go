@@ -6,14 +6,15 @@ package onsign
 import "C"
 
 import (
+	"encoding/base64"
 	"fmt"
 	"math/big"
 
-	"tss/common"
-	"tss/crypto"
-	"tss/crypto/encproof"
-	m "tss/eddsacmp/onsign/message"
-	"tss/tss"
+	"tss_sdk/common"
+	"tss_sdk/crypto"
+	"tss_sdk/crypto/encproof"
+	m "tss_sdk/eddsacmp/onsign/message"
+	"tss_sdk/tss"
 
 	edwards "github.com/decred/dcrd/dcrec/edwards/v2"
 	"google.golang.org/protobuf/proto"
@@ -145,18 +146,7 @@ func GetRound1Msg2(key string, to int) (result OnsignExecResult) {
 	return
 }
 
-func OnSignRound1Msg1Accept(key string, from int, msgWireBytes []byte) (result OnsignResult) {
-	msg, err := tss.ParseWireMsg([]byte(msgWireBytes))
-	if err != nil {
-		common.Logger.Errorf("msg error, parse wire msg fail, err:%s", err.Error())
-		result.Err = fmt.Sprintf("msg error, parse wire msg fail, err:%s", err.Error())
-		return
-	}
-	if _, ok := msg.Content().(*m.SignRound1Message1); !ok {
-		result.Err = fmt.Sprintf("not SignRound1Message1")
-		return
-	}
-
+func OnSignRound1MsgAccept(key string, from int, msgWireBytes string) (result OnsignResult) {
 	party, ok := SignParties[key]
 	if !ok {
 		common.Logger.Errorf("party not found: %s", key)
@@ -164,40 +154,29 @@ func OnSignRound1Msg1Accept(key string, from int, msgWireBytes []byte) (result O
 		return
 	}
 
-	result.Ok = true
-	party.ok[from] = true
-	if from == party.PartyID().Index {
+	rMsgBytes, err := base64.StdEncoding.DecodeString(msgWireBytes)
+	if err != nil {
+		common.Logger.Errorf("msg error, msg base64 decode fail, err:%s", err.Error())
+		result.Err = fmt.Sprintf("msg error, msg base64 decode fail, err:%s", err.Error())
 		return
 	}
-	party.temp.signRound1Message1s[from] = msgWireBytes
-	return
-}
 
-func OnSignRound1Msg2Accept(key string, from int, msgWireBytes []byte) (result OnsignResult) {
-	msg, err := tss.ParseWireMsg([]byte(msgWireBytes))
+	msg, err := tss.ParseWireMsg(rMsgBytes)
 	if err != nil {
 		common.Logger.Errorf("msg error, parse wire msg fail, err:%s", err.Error())
 		result.Err = fmt.Sprintf("msg error, parse wire msg fail, err:%s", err.Error())
 		return
 	}
-	if _, ok := msg.Content().(*m.SignRound1Message2); !ok {
-		result.Err = fmt.Sprintf("not SignRound1Message2")
+
+	if _, ok := msg.Content().(*m.SignRound1Message1); ok {
+		party.temp.signRound1Message1s[from] = rMsgBytes
+	} else if _, ok := msg.Content().(*m.SignRound1Message2); ok {
+		party.temp.signRound1Message2s[from] = rMsgBytes
+	} else {
+		result.Err = "not SignRound1Message"
 		return
 	}
-
-	party, ok := SignParties[key]
-	if !ok {
-		common.Logger.Errorf("party not found: %s", key)
-		result.Err = fmt.Sprintf("party not found: %s", key)
-		return
-	}
-
 	result.Ok = true
-	party.ok[from] = true
-	if from == party.PartyID().Index {
-		return
-	}
-	party.temp.signRound1Message2s[from] = msgWireBytes
 	return
 }
 
@@ -210,11 +189,12 @@ func OnSignRound1Finish(key string) (result OnsignResult) {
 	}
 
 	for j, msg := range party.temp.signRound1Message2s {
-		if party.ok[j] {
-			continue
+		if len(party.temp.signRound1Message1s[j]) == 0 {
+			result.Err = fmt.Sprintf("msg1 is null: %d", j)
+			return
 		}
-		if msg == nil || len(msg) == 0 {
-			result.Err = fmt.Sprintf("msg is null: %d", j)
+		if len(msg) == 0 {
+			result.Err = fmt.Sprintf("msg2 is null: %d", j)
 			return
 		}
 	}

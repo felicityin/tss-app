@@ -10,10 +10,10 @@ import (
 	"fmt"
 	"math/big"
 
-	"tss/common"
-	"tss/crypto/schnorr"
-	m "tss/eddsacmp/keygen/message"
-	"tss/tss"
+	"tss_sdk/common"
+	"tss_sdk/crypto/schnorr"
+	m "tss_sdk/eddsacmp/keygen/message"
+	"tss_sdk/tss"
 )
 
 func KeygenRound4Exec(key string) (result KeygenExecResult) {
@@ -30,12 +30,12 @@ func KeygenRound4Exec(key string) (result KeygenExecResult) {
 	i := party.PartyID().Index
 	common.Logger.Infof("party: %d, round_4 start", i)
 
-	for j, bz := range party.temp.kgRound3Messages {
+	for j := 0; j < len(party.temp.kgRound3Messages); j++ {
 		if j == i {
 			continue
 		}
 
-		pMsg, err := tss.ParseWireMsg(bz)
+		pMsg, err := tss.ParseWireMsg(party.temp.kgRound3Messages[j])
 		if err != nil {
 			common.Logger.Errorf("msg error, parse wire msg fail, err:%s", err.Error())
 			result.Err = fmt.Sprintf("msg error, parse wire msg fail, err:%s", err.Error())

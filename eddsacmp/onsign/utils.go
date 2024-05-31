@@ -7,7 +7,7 @@ import (
 
 	"github.com/agl/ed25519/edwards25519"
 
-	"tss/common"
+	"tss_sdk/common"
 )
 
 func encodedBytesToBigInt(s *[32]byte) *big.Int {

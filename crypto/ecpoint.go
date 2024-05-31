@@ -18,7 +18,7 @@ import (
 
 	"github.com/decred/dcrd/dcrec/edwards/v2"
 
-	"tss/tss"
+	"tss_sdk/tss"
 )
 
 // ECPoint convenience helper

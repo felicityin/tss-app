@@ -16,8 +16,8 @@ import (
 	"io"
 	"math/big"
 
-	"tss/common"
-	cmts "tss/crypto/commitments"
+	"tss_sdk/common"
+	cmts "tss_sdk/crypto/commitments"
 )
 
 const Iterations = 128

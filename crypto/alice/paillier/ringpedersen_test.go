@@ -3,7 +3,7 @@ package paillier
 import (
 	"testing"
 
-	paillierzkproof "tss/crypto/alice/zkproof/paillier"
+	paillierzkproof "tss_sdk/crypto/alice/zkproof/paillier"
 
 	"github.com/stretchr/testify/assert"
 )

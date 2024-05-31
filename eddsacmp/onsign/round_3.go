@@ -7,15 +7,16 @@ import "C"
 
 import (
 	"crypto/sha512"
+	"encoding/base64"
 	"fmt"
 	"math/big"
 
 	"github.com/agl/ed25519/edwards25519"
 
-	"tss/common"
-	"tss/crypto"
-	m "tss/eddsacmp/onsign/message"
-	"tss/tss"
+	"tss_sdk/common"
+	"tss_sdk/crypto"
+	m "tss_sdk/eddsacmp/onsign/message"
+	"tss_sdk/tss"
 )
 
 func OnsignRound3Exec(key string) (result OnsignExecResult) {
@@ -39,12 +40,12 @@ func OnsignRound3Exec(key string) (result OnsignExecResult) {
 	G, err := crypto.NewECPoint(party.params.EC(), party.params.EC().Params().Gx, party.params.EC().Params().Gy)
 	if err != nil {
 		common.Logger.Errorf("create base point failed")
-		result.Err = fmt.Sprintf("create base point failed")
+		result.Err = "create base point failed"
 		return
 	}
 
 	// verify received log proof and compute R
-	for j, _ := range party.params.Parties().IDs() {
+	for j := 0; j < len(party.temp.signRound2Messages); j++ {
 		if j == i {
 			continue
 		}
@@ -137,18 +138,7 @@ func OnsignRound3Exec(key string) (result OnsignExecResult) {
 	return result
 }
 
-func OnSignRound3MsgAccept(key string, from int, msgWireBytes []byte) (result OnsignResult) {
-	msg, err := tss.ParseWireMsg([]byte(msgWireBytes))
-	if err != nil {
-		common.Logger.Errorf("msg error, parse wire msg fail, err:%s", err.Error())
-		result.Err = fmt.Sprintf("msg error, parse wire msg fail, err:%s", err.Error())
-		return
-	}
-	if _, ok := msg.Content().(*m.SignRound3Message); !ok {
-		result.Err = fmt.Sprintf("not SignRound3Message")
-		return
-	}
-
+func OnSignRound3MsgAccept(key string, from int, msgWireBytes string) (result OnsignResult) {
 	party, ok := SignParties[key]
 	if !ok {
 		common.Logger.Errorf("party not found: %s", key)
@@ -156,12 +146,26 @@ func OnSignRound3MsgAccept(key string, from int, msgWireBytes []byte) (result On
 		return
 	}
 
-	result.Ok = true
-	party.ok[from] = true
-	if from == party.PartyID().Index {
+	rMsgBytes, err := base64.StdEncoding.DecodeString(msgWireBytes)
+	if err != nil {
+		common.Logger.Errorf("msg error, msg base64 decode fail, err:%s", err.Error())
+		result.Err = fmt.Sprintf("msg error, msg base64 decode fail, err:%s", err.Error())
 		return
 	}
-	party.temp.signRound3Messages[from] = msgWireBytes
+	party.temp.signRound3Messages[from] = rMsgBytes
+
+	msg, err := tss.ParseWireMsg(rMsgBytes)
+	if err != nil {
+		common.Logger.Errorf("msg error, parse wire msg fail, err:%s", err.Error())
+		result.Err = fmt.Sprintf("msg error, parse wire msg fail, err:%s", err.Error())
+		return
+	}
+	if _, ok := msg.Content().(*m.SignRound3Message); !ok {
+		result.Err = "not SignRound3Message"
+		return
+	}
+
+	result.Ok = true
 	return
 }
 
@@ -174,10 +178,7 @@ func OnSignRound3Finish(key string) (result OnsignResult) {
 	}
 
 	for j, msg := range party.temp.signRound3Messages {
-		if party.ok[j] {
-			continue
-		}
-		if msg == nil || len(msg) == 0 {
+		if len(msg) == 0 {
 			result.Err = fmt.Sprintf("msg is null: %d", j)
 			return
 		}

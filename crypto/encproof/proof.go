@@ -5,9 +5,9 @@ package encproof
 import (
 	"math/big"
 
-	"tss/crypto"
-	pailliera "tss/crypto/alice/paillier"
-	"tss/crypto/alice/utils"
+	"tss_sdk/crypto"
+	pailliera "tss_sdk/crypto/alice/paillier"
+	"tss_sdk/crypto/alice/utils"
 
 	errors2 "github.com/pkg/errors"
 )

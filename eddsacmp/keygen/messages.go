@@ -1,8 +1,8 @@
 package keygen
 
 import (
-	msg "tss/eddsacmp/keygen/message"
-	"tss/tss"
+	msg "tss_sdk/eddsacmp/keygen/message"
+	"tss_sdk/tss"
 )
 
 // These messages were generated from Protocol Buffers definitions into eddsa-keygen.pb.go

@@ -1,8 +1,8 @@
 package onsign
 
 import (
-	m "tss/eddsacmp/onsign/message"
-	"tss/tss"
+	m "tss_sdk/eddsacmp/onsign/message"
+	"tss_sdk/tss"
 )
 
 // These messages were generated from Protocol Buffers definitions into eddsa-signing.pb.go

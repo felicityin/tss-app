@@ -6,10 +6,11 @@ package keygen
 import "C"
 
 import (
+	"encoding/base64"
 	"fmt"
-	"tss/common"
-	m "tss/eddsacmp/keygen/message"
-	"tss/tss"
+	"tss_sdk/common"
+	m "tss_sdk/eddsacmp/keygen/message"
+	"tss_sdk/tss"
 )
 
 func KeygenRound2Exec(key string) (result KeygenExecResult) {
@@ -25,8 +26,8 @@ func KeygenRound2Exec(key string) (result KeygenExecResult) {
 
 	i := party.PartyID().Index
 
-	for j, bz := range party.temp.kgRound1Messages {
-		pMsg, err := tss.ParseWireMsg(bz)
+	for j := 0; j < len(party.temp.kgRound1Messages); j++ {
+		pMsg, err := tss.ParseWireMsg(party.temp.kgRound1Messages[j])
 		if err != nil {
 			common.Logger.Errorf("msg error, parse wire msg fail, err:%s", err.Error())
 			result.Err = fmt.Sprintf("msg error, parse wire msg fail, err:%s", err.Error())
@@ -59,8 +60,23 @@ func KeygenRound2Exec(key string) (result KeygenExecResult) {
 
 }
 
-func KeygenRound2Accept(key string, from int, msgWireBytes []byte) (result KeygenResult) {
-	msg, err := tss.ParseWireMsg([]byte(msgWireBytes))
+func KeygenRound2Accept(key string, from int, msgWireBytes string) (result KeygenResult) {
+	party, ok := Parties[key]
+	if !ok {
+		common.Logger.Errorf("party not found: %s", key)
+		result.Err = fmt.Sprintf("party not found: %s", key)
+		return
+	}
+
+	rMsgBytes, err := base64.StdEncoding.DecodeString(msgWireBytes)
+	if err != nil {
+		common.Logger.Errorf("msg error, msg base64 decode fail, err:%s", err.Error())
+		result.Err = fmt.Sprintf("msg error, msg base64 decode fail, err:%s", err.Error())
+		return
+	}
+	party.temp.kgRound2Messages[from] = rMsgBytes
+
+	msg, err := tss.ParseWireMsg(rMsgBytes)
 	if err != nil {
 		common.Logger.Errorf("msg error, parse wire msg fail, err:%s", err.Error())
 		result.Err = fmt.Sprintf("msg error, parse wire msg fail, err:%s", err.Error())
@@ -71,19 +87,7 @@ func KeygenRound2Accept(key string, from int, msgWireBytes []byte) (result Keyge
 		return
 	}
 
-	party, ok := Parties[key]
-	if !ok {
-		common.Logger.Errorf("party not found: %s", key)
-		result.Err = fmt.Sprintf("party not found: %s", key)
-		return
-	}
-
 	result.Ok = true
-	party.ok[from] = true
-	if from == party.PartyID().Index {
-		return
-	}
-	party.temp.kgRound2Messages[from] = msgWireBytes
 	return
 }
 
@@ -95,11 +99,11 @@ func KeygenRound2Finish(key string) (result KeygenResult) {
 		return
 	}
 
-	for j, msg := range party.temp.kgRound3Messages {
-		if party.ok[j] {
+	for j, msg := range party.temp.kgRound2Messages {
+		if j == party.PartyID().Index {
 			continue
 		}
-		if msg == nil || len(msg) == 0 {
+		if len(msg) == 0 {
 			result.Err = fmt.Sprintf("msg is null: %d", j)
 			return
 		}

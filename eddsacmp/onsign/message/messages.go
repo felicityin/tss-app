@@ -4,11 +4,11 @@ import (
 	"crypto/elliptic"
 	"math/big"
 
-	"tss/common"
-	"tss/crypto"
-	"tss/crypto/encproof"
-	"tss/crypto/logproof"
-	"tss/tss"
+	"tss_sdk/common"
+	"tss_sdk/crypto"
+	"tss_sdk/crypto/encproof"
+	"tss_sdk/crypto/logproof"
+	"tss_sdk/tss"
 
 	"google.golang.org/protobuf/proto"
 )

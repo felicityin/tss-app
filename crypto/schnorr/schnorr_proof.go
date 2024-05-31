@@ -11,8 +11,8 @@ import (
 	"io"
 	"math/big"
 
-	"tss/common"
-	"tss/crypto"
+	"tss_sdk/common"
+	"tss_sdk/crypto"
 )
 
 type (

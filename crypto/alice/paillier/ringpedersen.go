@@ -5,9 +5,9 @@ package paillier
 import (
 	"math/big"
 
-	zkPaillier "tss/crypto/alice/zkproof/paillier"
+	zkPaillier "tss_sdk/crypto/alice/zkproof/paillier"
 
-	"tss/crypto/alice/utils"
+	"tss_sdk/crypto/alice/utils"
 )
 
 type (

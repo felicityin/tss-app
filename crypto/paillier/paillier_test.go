@@ -15,10 +15,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"tss/common"
-	"tss/crypto"
-	. "tss/crypto/paillier"
-	"tss/tss"
+	"tss_sdk/common"
+	"tss_sdk/crypto"
+	. "tss_sdk/crypto/paillier"
+	"tss_sdk/tss"
 )
 
 // Using a modulus length of 2048 is recommended in the GG18 spec

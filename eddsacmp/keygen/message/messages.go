@@ -6,13 +6,13 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"tss/common"
-	"tss/crypto"
-	pailliera "tss/crypto/alice/paillier"
-	paillierzkproof "tss/crypto/alice/zkproof/paillier"
-	"tss/crypto/modproof"
-	"tss/crypto/paillier"
-	"tss/tss"
+	"tss_sdk/common"
+	"tss_sdk/crypto"
+	pailliera "tss_sdk/crypto/alice/paillier"
+	paillierzkproof "tss_sdk/crypto/alice/zkproof/paillier"
+	"tss_sdk/crypto/modproof"
+	"tss_sdk/crypto/paillier"
+	"tss_sdk/tss"
 )
 
 // ----- //

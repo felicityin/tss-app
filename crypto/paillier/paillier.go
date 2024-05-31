@@ -27,8 +27,8 @@ import (
 
 	"github.com/otiai10/primes"
 
-	"tss/common"
-	crypto2 "tss/crypto"
+	"tss_sdk/common"
+	crypto2 "tss_sdk/crypto"
 )
 
 const (

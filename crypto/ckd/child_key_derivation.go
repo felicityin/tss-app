@@ -16,10 +16,10 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
-	"tss/tss"
+	"tss_sdk/tss"
 
-	"tss/common"
-	"tss/crypto"
+	"tss_sdk/common"
+	"tss_sdk/crypto"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcutil/base58"

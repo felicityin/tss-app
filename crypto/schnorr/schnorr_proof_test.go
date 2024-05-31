@@ -12,10 +12,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"tss/common"
-	"tss/crypto"
-	. "tss/crypto/schnorr"
-	"tss/tss"
+	"tss_sdk/common"
+	"tss_sdk/crypto"
+	. "tss_sdk/crypto/schnorr"
+	"tss_sdk/tss"
 )
 
 var Session = []byte("session")

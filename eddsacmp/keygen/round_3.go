@@ -7,15 +7,16 @@ import "C"
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"math/big"
 	"strconv"
 
-	"tss/common"
-	"tss/crypto/alice/utils"
-	"tss/crypto/schnorr"
-	m "tss/eddsacmp/keygen/message"
-	"tss/tss"
+	"tss_sdk/common"
+	"tss_sdk/crypto/alice/utils"
+	"tss_sdk/crypto/schnorr"
+	m "tss_sdk/eddsacmp/keygen/message"
+	"tss_sdk/tss"
 )
 
 func KeygenRound3Exec(key string) (result KeygenExecResult) {
@@ -31,15 +32,15 @@ func KeygenRound3Exec(key string) (result KeygenExecResult) {
 	i := party.PartyID().Index
 	common.Logger.Infof("party: %d, round_3 start", i)
 
-	for j, bz := range party.temp.kgRound2Messages {
+	for j := 0; j < len(party.temp.kgRound2Messages); j++ {
 		if j == i {
 			continue
 		}
 
-		pMsg, err := tss.ParseWireMsg(bz)
+		pMsg, err := tss.ParseWireMsg(party.temp.kgRound2Messages[j])
 		if err != nil {
-			common.Logger.Errorf("msg error, parse wire msg fail, err:%s", err.Error())
-			result.Err = fmt.Sprintf("msg error, parse wire msg fail, err:%s", err.Error())
+			common.Logger.Errorf("msg error, parse wire msg fail, err: %s, j: %d, bytes: %v", err.Error(), j, party.temp.kgRound2Messages[j])
+			result.Err = fmt.Sprintf("msg error, parse wire msg fail, err: %s, j: %d, bytes: %v", err.Error(), j, party.temp.kgRound2Messages[j])
 			return
 		}
 
@@ -115,8 +116,23 @@ func KeygenRound3Exec(key string) (result KeygenExecResult) {
 	return result
 }
 
-func KeygenRound3Accept(key string, from int, msgWireBytes []byte) (result KeygenResult) {
-	msg, err := tss.ParseWireMsg([]byte(msgWireBytes))
+func KeygenRound3Accept(key string, from int, msgWireBytes string) (result KeygenResult) {
+	party, ok := Parties[key]
+	if !ok {
+		common.Logger.Errorf("party not found: %s", key)
+		result.Err = fmt.Sprintf("party not found: %s", key)
+		return
+	}
+
+	rMsgBytes, err := base64.StdEncoding.DecodeString(msgWireBytes)
+	if err != nil {
+		common.Logger.Errorf("msg error, msg base64 decode fail, err:%s", err.Error())
+		result.Err = fmt.Sprintf("msg error, msg base64 decode fail, err:%s", err.Error())
+		return
+	}
+	party.temp.kgRound3Messages[from] = rMsgBytes
+
+	msg, err := tss.ParseWireMsg(rMsgBytes)
 	if err != nil {
 		common.Logger.Errorf("msg error, parse wire msg fail, err:%s", err.Error())
 		result.Err = fmt.Sprintf("msg error, parse wire msg fail, err:%s", err.Error())
@@ -127,19 +143,7 @@ func KeygenRound3Accept(key string, from int, msgWireBytes []byte) (result Keyge
 		return
 	}
 
-	party, ok := Parties[key]
-	if !ok {
-		common.Logger.Errorf("party not found: %s", key)
-		result.Err = fmt.Sprintf("party not found: %s", key)
-		return
-	}
-
 	result.Ok = true
-	party.ok[from] = true
-	if from == party.PartyID().Index {
-		return
-	}
-	party.temp.kgRound3Messages[from] = msgWireBytes
 	return
 }
 
@@ -152,10 +156,10 @@ func KeygenRound3Finish(key string) (result KeygenResult) {
 	}
 
 	for j, msg := range party.temp.kgRound3Messages {
-		if party.ok[j] {
+		if j == party.PartyID().Index {
 			continue
 		}
-		if msg == nil || len(msg) == 0 {
+		if len(msg) == 0 {
 			result.Err = fmt.Sprintf("msg is null: %d", j)
 			return
 		}

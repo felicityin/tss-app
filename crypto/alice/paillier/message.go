@@ -17,7 +17,7 @@ package paillier
 import (
 	"math/big"
 
-	"tss/crypto/alice/utils"
+	"tss_sdk/crypto/alice/utils"
 )
 
 func (msg *PubKeyMessage) ToPubkey() (*publicKey, error) {

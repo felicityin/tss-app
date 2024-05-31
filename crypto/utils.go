@@ -11,7 +11,7 @@ import (
 	"io"
 	"math/big"
 
-	"tss/common"
+	"tss_sdk/common"
 )
 
 func GenerateNTildei(rand io.Reader, safePrimes [2]*big.Int) (NTildei, h1i, h2i *big.Int, err error) {

@@ -1,13 +1,9 @@
 package onsign
 
 import (
-	"errors"
-	"math/big"
-
-	"tss/common"
-	"tss/crypto"
-	"tss/eddsacmp/keygen"
-	"tss/tss"
+	"tss_sdk/common"
+	"tss_sdk/eddsacmp/keygen"
+	"tss_sdk/tss"
 )
 
 const (
@@ -73,28 +69,4 @@ func (round *base) resetOK() {
 	for j := range round.ok {
 		round.ok[j] = false
 	}
-}
-
-// get ssid from local params
-func (round *base) getSSID() ([]byte, error) {
-	ssidList := []*big.Int{round.EC().Params().P, round.EC().Params().N, round.EC().Params().Gx, round.EC().Params().Gy} // ec curve
-	ssidList = append(ssidList, round.Parties().IDs().Keys()...)                                                         // parties
-	BigXjList, err := crypto.FlattenECPoints(round.key.PubXj)
-	if err != nil {
-		return nil, round.WrapError(errors.New("read BigXj failed"), round.PartyID())
-	}
-	ssidList = append(ssidList, BigXjList...)                    // BigXj
-	ssidList = append(ssidList, big.NewInt(int64(round.number))) // round number
-	ssidList = append(ssidList, round.temp.ssidNonce)
-	for _, pk := range round.key.RingPedersenPKs {
-		if pk == nil {
-			return nil, errors.New("found nil pedersen pk")
-		}
-		ssidList = append(ssidList, pk.N)
-		ssidList = append(ssidList, pk.S)
-		ssidList = append(ssidList, pk.T)
-	}
-	ssid := common.SHA512_256i(ssidList...).Bytes()
-
-	return ssid, nil
 }

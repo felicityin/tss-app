@@ -10,11 +10,11 @@ import (
 	"fmt"
 	"math/big"
 
-	"tss/common"
-	m "tss/eddsacmp/onsign/message"
-	"tss/tss"
+	"tss_sdk/common"
+	m "tss_sdk/eddsacmp/onsign/message"
+	"tss_sdk/tss"
 
-	// m "tss/eddsacmp/onsign/message"
+	// m "tss_sdk/eddsacmp/onsign/message"
 
 	"github.com/agl/ed25519/edwards25519"
 	edwards "github.com/decred/dcrd/dcrec/edwards/v2"
@@ -43,7 +43,7 @@ func OnsignFinalExec(key string) (result OnsignExecResult) {
 			continue
 		}
 
-		pMsg, err := tss.ParseWireMsg(party.temp.signRound1Message2s[j])
+		pMsg, err := tss.ParseWireMsg(party.temp.signRound3Messages[j])
 		if err != nil {
 			common.Logger.Errorf("msg error, parse wire msg fail, err:%s", err.Error())
 			result.Err = fmt.Sprintf("msg error, parse wire msg fail, err:%s", err.Error())
@@ -77,7 +77,8 @@ func OnsignFinalExec(key string) (result OnsignExecResult) {
 
 	ok = edwards.Verify(&pk, party.data.M, party.temp.r, s)
 	if !ok {
-		result.Err = fmt.Sprintf("verify failed")
+		common.Logger.Errorf("verify failed")
+		result.Err = "verify failed"
 		return
 	}
 

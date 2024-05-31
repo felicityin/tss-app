@@ -12,7 +12,7 @@ import (
 	"reflect"
 	"testing"
 
-	"tss/common"
+	"tss_sdk/common"
 )
 
 func TestRejectionSample(t *testing.T) {

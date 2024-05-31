@@ -6,14 +6,15 @@ package keygen
 import "C"
 
 import (
+	"encoding/base64"
 	"fmt"
 	"math/big"
 	"strconv"
 
-	"tss/common"
-	"tss/crypto"
-	m "tss/eddsacmp/keygen/message"
-	"tss/tss"
+	"tss_sdk/common"
+	"tss_sdk/crypto"
+	m "tss_sdk/eddsacmp/keygen/message"
+	"tss_sdk/tss"
 )
 
 type KeygenExecResult struct {
@@ -91,8 +92,23 @@ func KeygenRound1Exec(key string) (result KeygenExecResult) {
 	return result
 }
 
-func KeygenRound1Accept(key string, from int, msgWireBytes []byte) (result KeygenResult) {
-	msg, err := tss.ParseWireMsg([]byte(msgWireBytes))
+func KeygenRound1Accept(key string, from int, msgWireBytes string) (result KeygenResult) {
+	party, ok := Parties[key]
+	if !ok {
+		common.Logger.Errorf("party not found: %s", key)
+		result.Err = fmt.Sprintf("party not found: %s", key)
+		return
+	}
+
+	rMsgBytes, err := base64.StdEncoding.DecodeString(msgWireBytes)
+	if err != nil {
+		common.Logger.Errorf("msg error, msg base64 decode fail, err:%s", err.Error())
+		result.Err = fmt.Sprintf("msg error, msg base64 decode fail, err:%s", err.Error())
+		return
+	}
+	party.temp.kgRound1Messages[from] = rMsgBytes
+
+	msg, err := tss.ParseWireMsg(rMsgBytes)
 	if err != nil {
 		common.Logger.Errorf("msg error, parse wire msg fail, err:%s", err.Error())
 		result.Err = fmt.Sprintf("msg error, parse wire msg fail, err:%s", err.Error())
@@ -103,19 +119,7 @@ func KeygenRound1Accept(key string, from int, msgWireBytes []byte) (result Keyge
 		return
 	}
 
-	party, ok := Parties[key]
-	if !ok {
-		common.Logger.Errorf("party not found: %s", key)
-		result.Err = fmt.Sprintf("party not found: %s", key)
-		return
-	}
-
 	result.Ok = true
-	party.ok[from] = true
-	if from == party.PartyID().Index {
-		return
-	}
-	party.temp.kgRound1Messages[from] = msgWireBytes
 	return
 }
 
@@ -128,10 +132,10 @@ func KeygenRound1Finish(key string) (result KeygenResult) {
 	}
 
 	for j, msg := range party.temp.kgRound1Messages {
-		if party.ok[j] {
+		if j == party.PartyID().Index {
 			continue
 		}
-		if msg == nil || len(msg) == 0 {
+		if len(msg) == 0 {
 			result.Err = fmt.Sprintf("msg is null: %d", j)
 			return
 		}

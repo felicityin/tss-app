@@ -4,8 +4,8 @@ import (
 	"math/big"
 	"testing"
 
-	"tss/crypto"
-	pailliera "tss/crypto/alice/paillier"
+	"tss_sdk/crypto"
+	pailliera "tss_sdk/crypto/alice/paillier"
 
 	edwards "github.com/decred/dcrd/dcrec/edwards/v2"
 	"github.com/stretchr/testify/assert"

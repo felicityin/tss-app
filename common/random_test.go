@@ -13,7 +13,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"tss/common"
+	"tss_sdk/common"
 )
 
 const (

@@ -7,8 +7,8 @@ import (
 	"errors"
 	"math/big"
 
-	"tss/crypto/alice/utils"
-	"tss/crypto/alice/zkproof"
+	"tss_sdk/crypto/alice/utils"
+	"tss_sdk/crypto/alice/zkproof"
 
 	"github.com/golang/protobuf/proto"
 )

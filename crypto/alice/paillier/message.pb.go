@@ -21,7 +21,7 @@
 package paillier
 
 import (
-	zkproof "tss/crypto/alice/zkproof"
+	zkproof "tss_sdk/crypto/alice/zkproof"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"

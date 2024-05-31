@@ -12,7 +12,7 @@ import (
 	"math/big"
 	"sort"
 
-	"tss/common"
+	"tss_sdk/common"
 )
 
 type (

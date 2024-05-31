@@ -18,7 +18,7 @@ import (
 	"errors"
 	"math/big"
 
-	"tss/crypto/alice/utils"
+	"tss_sdk/crypto/alice/utils"
 )
 
 const (

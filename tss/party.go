@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"sync"
 
-	"tss/common"
+	"tss_sdk/common"
 )
 
 type Party interface {

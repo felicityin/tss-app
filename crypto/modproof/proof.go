@@ -11,7 +11,7 @@ import (
 	"io"
 	"math/big"
 
-	"tss/common"
+	"tss_sdk/common"
 )
 
 const (

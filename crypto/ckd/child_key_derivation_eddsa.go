@@ -11,8 +11,8 @@ import (
 
 	"strconv"
 	"strings"
-	"tss/common"
-	"tss/crypto"
+	"tss_sdk/common"
+	"tss_sdk/crypto"
 
 	"github.com/decred/dcrd/dcrec/edwards/v2"
 )
